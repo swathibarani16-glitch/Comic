@@ -23,6 +23,7 @@ once you've confirmed your Gemini key has image-generation access.
 import os
 import re
 import json
+import time
 import uuid
 import base64
 from pathlib import Path
@@ -33,33 +34,75 @@ from dotenv import load_dotenv
 
 from models import Panel, ComicStory
 
-load_dotenv()
+load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
-IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
-ENABLE_IMAGE_GEN = os.getenv("ENABLE_IMAGE_GEN", "false").lower() == "true"
-
-if not GEMINI_API_KEY:
-    raise RuntimeError(
-        "GEMINI_API_KEY not set. Copy .env.example to .env and paste a key "
-        "from https://aistudio.google.com/apikey"
-    )
-
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 GENERATED_DIR = Path(__file__).parent / "static" / "generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _call_gemini(model: str, prompt: str) -> dict:
-    """POSTs a single-turn prompt to the Gemini REST API and returns the parsed JSON body."""
-    url = f"{API_BASE}/{model}:generateContent?key={GEMINI_API_KEY}"
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    response = requests.post(url, json=payload, timeout=60)
-    if not response.ok:
-        raise RuntimeError(f"Gemini API error ({response.status_code}): {response.text[:300]}")
-    return response.json()
+def _get_api_key() -> str:
+    load_dotenv(override=True)
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError(
+            "GEMINI_API_KEY not set. Copy .env.example to .env and paste a key "
+            "from https://aistudio.google.com/apikey"
+        )
+    return key
+
+
+def _get_text_model() -> str:
+    return os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
+
+
+def _get_image_model() -> str:
+    return os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+
+
+def _is_image_gen_enabled() -> bool:
+    load_dotenv(override=True)
+    return os.getenv("ENABLE_IMAGE_GEN", "false").lower() == "true"
+
+
+def _call_gemini(model: str, prompt: str, retries: int = 2) -> dict:
+    """POSTs a prompt to Gemini REST API with retries & model fallback for 503/429 spikes."""
+    key = _get_api_key()
+    
+    # Target model first, followed by fallbacks if high demand occurs
+    models_to_try = [model]
+    for fallback in ["gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-flash-latest"]:
+        if fallback not in models_to_try:
+            models_to_try.append(fallback)
+
+    last_exc = None
+    for target_model in models_to_try:
+        url = f"{API_BASE}/{target_model}:generateContent?key={key}"
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+
+        for attempt in range(retries):
+            try:
+                response = requests.post(url, json=payload, timeout=60)
+                if response.status_code in (429, 503, 504):
+                    last_exc = RuntimeError(f"Gemini API ({response.status_code}): high demand on {target_model}")
+                    if attempt < retries - 1:
+                        time.sleep(1.5 * (attempt + 1))
+                    continue
+                if not response.ok:
+                    raise RuntimeError(f"Gemini API error ({response.status_code}): {response.text[:300]}")
+                return response.json()
+            except (requests.exceptions.RequestException, ConnectionResetError, Exception) as exc:
+                last_exc = exc
+                if attempt < retries - 1:
+                    time.sleep(1.5 * (attempt + 1))
+                    
+        # If target_model is image model, do not try text fallbacks
+        if "image" in model:
+            break
+
+    raise RuntimeError(f"Gemini service temporary issue: {last_exc}") from last_exc
 
 
 def _build_script_prompt(story_idea: str, genre: str, art_style: str, num_panels: int) -> str:
@@ -105,7 +148,7 @@ def _extract_json(text: str) -> dict:
 
 def generate_comic_script(story_idea: str, genre: str, art_style: str, num_panels: int) -> ComicStory:
     prompt = _build_script_prompt(story_idea, genre, art_style, num_panels)
-    data = _call_gemini(TEXT_MODEL, prompt)
+    data = _call_gemini(_get_text_model(), prompt)
 
     try:
         text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -121,14 +164,14 @@ def generate_panel_image(scene_description: str, art_style: str) -> Optional[str
     """Returns a path relative to /static (e.g. 'generated/xyz.png'), or None
     if image generation is disabled or fails. The app must keep working with
     text-only panels either way."""
-    if not ENABLE_IMAGE_GEN:
+    if not _is_image_gen_enabled():
         return None
     try:
         prompt = (
             f"{art_style} style comic book panel illustration, single frame, "
             f"no text, no speech bubbles, no captions: {scene_description}"
         )
-        data = _call_gemini(IMAGE_MODEL, prompt)
+        data = _call_gemini(_get_image_model(), prompt)
         parts = data["candidates"][0]["content"]["parts"]
         for part in parts:
             inline = part.get("inlineData") or part.get("inline_data")
@@ -145,6 +188,8 @@ def generate_panel_image(scene_description: str, art_style: str) -> Optional[str
 def generate_comic(story_idea: str, genre: str, art_style: str, num_panels: int) -> ComicStory:
     """Top-level entry point used by routes.py."""
     story = generate_comic_script(story_idea, genre, art_style, num_panels)
-    for panel in story.panels:
+    for i, panel in enumerate(story.panels):
+        if i > 0 and _is_image_gen_enabled():
+            time.sleep(1.5)
         panel.image_path = generate_panel_image(panel.scene_description, art_style)
     return story

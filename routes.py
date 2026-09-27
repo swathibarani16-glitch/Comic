@@ -20,13 +20,13 @@ MIN_PANELS = 1
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @router.post("/generate", response_class=HTMLResponse)
 async def generate(
     request: Request,
-    story_idea: str = Form(...),
+    story_idea: str = Form(""),
     genre: str = Form("Adventure"),
     art_style: str = Form("Manga"),
     num_panels: int = Form(6),
@@ -44,9 +44,9 @@ async def generate(
             error = f"Could not generate comic: {exc}"
 
     return templates.TemplateResponse(
+        request,
         "result.html",
         {
-            "request": request,
             "story": story,
             "error": error,
             "form": {
