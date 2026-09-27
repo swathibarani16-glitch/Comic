@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ story.title if story else "ComicCraft" }}{% endblock %}
+
+{% block content %}
+{% if error %}
+  <div class="alert alert-danger">
+    <strong>Oops:</strong> {{ error }}
+  </div>
+  <a href="/" class="btn comic-btn">← Try again</a>
+{% elif story %}
+  <div class="text-center mb-4">
+    <h1 class="comic-title display-5">{{ story.title }}</h1>
+    <a href="/" class="btn btn-outline-secondary btn-sm">← Create another comic</a>
+  </div>
+
+  <div class="comic-grid">
+    {% for panel in story.panels %}
+    <div class="comic-panel">
+      <div class="panel-number">#{{ panel.panel_number }}</div>
+      {% if panel.image_path %}
+        <img src="/static/{{ panel.image_path }}" alt="Panel {{ panel.panel_number }}" class="panel-image">
+      {% else %}
+        <div class="panel-placeholder">
+          <p>{{ panel.scene_description }}</p>
+        </div>
+      {% endif %}
+      {% if panel.caption %}
+        <div class="panel-caption">{{ panel.caption }}</div>
+      {% endif %}
+      {% if panel.dialogue %}
+        <div class="speech-bubble">{{ panel.dialogue }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No comic generated yet. <a href="/">Go back</a>.</p>
+{% endif %}
+{% endblock %}

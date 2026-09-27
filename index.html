@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}ComicCraft - Create your comic{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card comic-card shadow">
+      <div class="card-body">
+        <h2 class="comic-title mb-3">Turn your idea into a comic</h2>
+        <p class="text-muted">Describe your story, pick a genre and art style, and Gemini will write the panels for you.</p>
+
+        <form method="post" action="/generate">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Story idea</label>
+            <textarea class="form-control" name="story_idea" rows="4" placeholder="e.g. A shy robot in a busy city discovers it can paint emotions" required></textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Genre</label>
+              <select class="form-select" name="genre">
+                <option>Adventure</option>
+                <option>Comedy</option>
+                <option>Sci-Fi</option>
+                <option>Fantasy</option>
+                <option>Mystery</option>
+                <option>Slice of Life</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Art style</label>
+              <select class="form-select" name="art_style">
+                <option>Manga</option>
+                <option>American Comic</option>
+                <option>Watercolor</option>
+                <option>Minimalist Line Art</option>
+                <option>Retro Pulp</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Number of panels</label>
+            <input type="number" class="form-control" name="num_panels" value="6" min="1" max="10">
+          </div>
+
+          <button type="submit" class="btn btn-lg comic-btn w-100">✨ Generate Comic</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

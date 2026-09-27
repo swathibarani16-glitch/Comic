@@ -1,0 +1,96 @@
+body {
+  background: #f4f1ea;
+  font-family: 'Poppins', sans-serif;
+}
+
+.comic-title {
+  font-family: 'Bangers', cursive;
+  letter-spacing: 1px;
+  color: #1f1f1f;
+}
+
+.comic-navbar {
+  background: #ff4d4d;
+  border-bottom: 4px solid #1f1f1f;
+}
+
+.comic-card {
+  border: 3px solid #1f1f1f;
+  border-radius: 12px;
+}
+
+.comic-btn {
+  background: #ffd23f;
+  border: 3px solid #1f1f1f;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+.comic-btn:hover {
+  background: #ffb703;
+  color: #1f1f1f;
+}
+
+.comic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.comic-panel {
+  background: #fff;
+  border: 3px solid #1f1f1f;
+  border-radius: 10px;
+  padding: 1rem;
+  position: relative;
+  box-shadow: 6px 6px 0 #1f1f1f;
+}
+
+.panel-number {
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  background: #1f1f1f;
+  color: #fff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.panel-image {
+  width: 100%;
+  border-radius: 6px;
+  border: 2px solid #1f1f1f;
+  margin-bottom: 0.75rem;
+}
+
+.panel-placeholder {
+  background: #eee;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  padding: 1rem;
+  min-height: 120px;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.panel-caption {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.speech-bubble {
+  background: #fff;
+  border: 2px solid #1f1f1f;
+  border-radius: 16px;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  position: relative;
+}
