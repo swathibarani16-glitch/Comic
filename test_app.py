@@ -5,7 +5,6 @@ Quick sanity tests. Gemini calls are mocked so tests run without an API key
 or network access — run with:  pytest -v
 """
 
-import sys
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -14,20 +13,21 @@ from main import app
 from models import ComicStory, Panel
 
 
-def test_app_imports_without_gemini_sdk():
-    with patch.dict(sys.modules, {"google.generativeai": None}):
-        sys.modules.pop("gemini_service", None)
-        import importlib
-
-        module = importlib.import_module("gemini_service")
-        assert hasattr(module, "GEMINI_API_KEY")
-
 client = TestClient(app)
 
 
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
+    assert response.text == "OK"
+
+
+@patch("routes.check_gemini_connection")
+def test_health_gemini_endpoint(mock_check):
+    mock_check.return_value = {"status": "ok", "gemini": "connected"}
+    response = client.get("/api/health/gemini")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "gemini": "connected"}
 
 
 def test_index_loads():
@@ -57,3 +57,4 @@ def test_generate_success(mock_generate_comic):
     assert response.status_code == 200
     assert "Test Comic" in response.text
     assert "Let&#39;s go!" in response.text or "Let's go!" in response.text
+

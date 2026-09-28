@@ -6,10 +6,10 @@ calls the Gemini service, and renders the Jinja2 templates.
 """
 
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from gemini_service import generate_comic
+from gemini_service import generate_comic, check_gemini_connection, _mask_credentials
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -41,7 +41,8 @@ async def generate(
         try:
             story = generate_comic(story_idea, genre, art_style, num_panels)
         except Exception as exc:  # noqa: BLE001 - surface a friendly error to the UI
-            error = f"Could not generate comic: {exc}"
+            safe_err = _mask_credentials(str(exc))
+            error = f"Could not generate comic: {safe_err}"
 
     return templates.TemplateResponse(
         request,
@@ -62,3 +63,11 @@ async def generate(
 @router.get("/health", response_class=HTMLResponse)
 async def health():
     return "OK"
+
+
+@router.get("/api/health/gemini", response_class=JSONResponse)
+async def health_gemini():
+    result = check_gemini_connection()
+    status_code = 200 if result.get("status") == "ok" else (401 if "authentication" in result.get("message", "").lower() else 500)
+    return JSONResponse(content=result, status_code=status_code)
+
