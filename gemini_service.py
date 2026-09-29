@@ -25,8 +25,16 @@ from models import Panel, ComicStory
 
 load_dotenv(override=True)
 
-GENERATED_DIR = Path(__file__).parent / "static" / "generated"
-GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+GENERATED_DIR = Path(__file__).resolve().parent / "static" / "generated"
+
+# Guard against read-only filesystem (e.g., Vercel serverless).
+# Image gen degrades gracefully if the directory is ephemeral.
+try:
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    import tempfile
+    GENERATED_DIR = Path(tempfile.gettempdir()) / "comiccraft_generated"
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _mask_credentials(text: str) -> str:

@@ -8,11 +8,14 @@ calls the Gemini service, and renders the Jinja2 templates.
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from gemini_service import generate_comic, check_gemini_connection, _mask_credentials
 
+BASE_DIR = Path(__file__).resolve().parent
+
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 MAX_PANELS = 10
 MIN_PANELS = 1
